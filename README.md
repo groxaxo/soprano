@@ -105,6 +105,13 @@ for chunk in stream:
 out = torch.cat(chunks)
 ```
 
+## Usage tips:
+
+* Soprano works best when each sentence is between 2 and 15 seconds long.
+* Although Soprano recognizes numbers and some special characters, it occasionally mispronounces them. Best results can be achieved by converting these into their phonetic form. (1+1 -> one plus one, etc)
+* If Soprano produces unsatisfactory results, you can easily regenerate it for a new, potentially better generation. You may also change the sampling settings for more varied results.
+* Avoid improper grammar such as not using contractions, multiple spaces, etc.
+
 ---
 
 ## Key Features
