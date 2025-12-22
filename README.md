@@ -110,15 +110,15 @@ out = torch.cat(chunks)
 
 ### 1. High‑fidelity 32 kHz audio
 
-Soprano synthesizes speech at **32 kHz**, delivering clarity that is perceptually indistinguishable from 44.1 kHz audio and significantly higher quality than the 24 kHz output used by many existing TTS models.
+Soprano synthesizes speech at **32 kHz**, delivering quality that is perceptually indistinguishable from 44.1/48 kHz audio and significantly sharper and clearer than the 24 kHz output used by many existing TTS models.
 
-### 2. Vocos‑based neural decoder
+### 2. Vocoder‑based neural decoder
 
-Instead of slow diffusion decoders, Soprano uses a **Vocos‑based decoder**, enabling **orders‑of‑magnitude faster** waveform generation while maintaining comparable perceptual quality.
+Instead of slow diffusion decoders, Soprano uses a **vocoder‑based decoder** with a Vocos architecture, enabling **orders‑of‑magnitude faster** waveform generation while maintaining comparable perceptual quality.
 
-### 3. Seamless real‑time streaming
+### 3. Seamless Streaming
 
-Soprano leverages the decoder’s receptive field to losslessly stream audio with **ultra‑low latency**. The streamed output is acoustically identical to offline synthesis, enabling interactive applications with sub‑frame delays.
+Soprano leverages the decoder’s finite receptive field to losslessly stream audio with ultra‑low latency. The streamed output is acoustically identical to offline synthesis, and streaming can begin after generating just 5 audio tokens, enabling **<15 ms latency**.
 
 ### 4. State‑of‑the‑art neural audio codec
 
@@ -132,9 +132,7 @@ Each sentence is generated independently, enabling **effectively infinite genera
 
 ## Limitations
 
-* Trained on only 1,000 hours of data. The quality is already very good, but I expect it to get much better with even more training.
-* No voice cloning support yet
-* English‑only model
+I’m a second-year undergrad who’s just started working on TTS models, so I wanted to start small. Soprano was only pretrained on 1000 hours of audio (~100x less than other TTS models), so its stability and quality will improve tremendously as I train it on more data. Also, I optimized Soprano purely for speed, which is why it lacks bells and whistles like voice cloning, style control, and multilingual support. Now that I have experience creating TTS models, I have a lot of ideas for how to make Soprano even better in the future, so stay tuned for those!
 
 ---
 
