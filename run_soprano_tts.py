@@ -47,13 +47,14 @@ def main():
     ap.add_argument("--chunk_size", type=int, default=1, help="Chunk size for streaming (default: 1)")
 
     args = ap.parse_args()
-    device = pick_device(args.device)
-
-    # Validate streaming + backend compatibility
+    
+    # Validate streaming + backend compatibility early
     if args.stream and args.backend == "transformers":
         print("ERROR: Streaming mode (--stream) is not supported with the transformers backend.", file=sys.stderr)
         print("Please use --backend auto to try LMDeploy, or remove --stream flag.", file=sys.stderr)
         sys.exit(1)
+    
+    device = pick_device(args.device)
 
     if device.startswith("cuda"):
         name = torch.cuda.get_device_name(0)
@@ -93,8 +94,14 @@ def main():
         )
         for chunk in stream:
             chunks.append(chunk)
-        audio = torch.cat(chunks)
         
+        # Validate we got audio data
+        if not chunks:
+            print("ERROR: No audio chunks generated during streaming.", file=sys.stderr)
+            sys.exit(1)
+        
+        audio = torch.cat(chunks)
+
         # Save the concatenated audio chunks directly
         wavfile.write(args.out, 32000, audio.cpu().numpy())
 
