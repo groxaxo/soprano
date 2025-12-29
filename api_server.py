@@ -6,11 +6,10 @@ This server provides an OpenAI-compatible /v1/audio/speech endpoint
 for text-to-speech synthesis using the Soprano TTS model.
 """
 from fastapi import FastAPI, HTTPException, Response
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
+from contextlib import asynccontextmanager
 import torch
-import numpy as np
 import io
 from scipy.io import wavfile
 from soprano import SopranoTTS
@@ -21,17 +20,43 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Global model instance
+model: Optional[SopranoTTS] = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown"""
+    global model
+    # Startup
+    try:
+        logger.info("Loading Soprano TTS model...")
+        model = SopranoTTS(
+            backend='auto',
+            device='cuda',
+            cache_size_mb=10,
+            decoder_batch_size=1
+        )
+        logger.info("Model loaded successfully!")
+    except Exception as e:
+        logger.error(f"Failed to load model: {e}")
+        model = None
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down...")
+
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Soprano TTS API",
     description="OpenAI-compatible Text-to-Speech API powered by Soprano TTS",
     version="0.0.2",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
-
-# Global model instance
-model: Optional[SopranoTTS] = None
 
 
 class TTSRequest(BaseModel):
@@ -85,24 +110,6 @@ class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
     backend: str
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize the TTS model on startup"""
-    global model
-    try:
-        logger.info("Loading Soprano TTS model...")
-        model = SopranoTTS(
-            backend='auto',
-            device='cuda',
-            cache_size_mb=10,
-            decoder_batch_size=1
-        )
-        logger.info("Model loaded successfully!")
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
-        model = None
 
 
 @app.get("/", response_model=dict)
@@ -160,10 +167,12 @@ async def create_speech(request: TTSRequest):
         )
     
     # Validate voice (Soprano only has one voice)
-    if request.voice not in ["default", "alloy", "echo", "fable", "onyx", "nova", "shimmer"]:
+    # Accept OpenAI voice names for compatibility but all map to default
+    valid_voices = ["default", "alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+    if request.voice not in valid_voices:
         raise HTTPException(
             status_code=400,
-            detail=f"Voice '{request.voice}' not supported. Only 'default' is available."
+            detail=f"Voice '{request.voice}' not supported. Supported voices: {', '.join(valid_voices)} (all map to default)"
         )
     
     # Validate response format
@@ -194,9 +203,9 @@ async def create_speech(request: TTSRequest):
         
         logger.info("Speech generated successfully")
         
-        # Return audio as streaming response
-        return StreamingResponse(
-            wav_buffer,
+        # Return audio as response
+        return Response(
+            content=wav_buffer.getvalue(),
             media_type="audio/wav",
             headers={
                 "Content-Disposition": "attachment; filename=speech.wav"

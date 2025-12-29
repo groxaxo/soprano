@@ -5,10 +5,7 @@ A modern, user-friendly interface for text-to-speech synthesis
 """
 import gradio as gr
 import torch
-import numpy as np
 from soprano import SopranoTTS
-import tempfile
-import os
 
 # Initialize the TTS model
 print("Loading Soprano TTS model...")

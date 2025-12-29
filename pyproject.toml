@@ -20,10 +20,10 @@ dependencies = [
   "torch",
   "unidecode",
   "scipy",
-  "gradio>=4.0.0",
-  "fastapi>=0.100.0",
-  "uvicorn[standard]>=0.23.0",
-  "pydantic>=2.0.0"
+  "gradio>=4.0.0,<5.0.0",
+  "fastapi>=0.100.0,<1.0.0",
+  "uvicorn[standard]>=0.23.0,<1.0.0",
+  "pydantic>=2.0.0,<3.0.0"
 ]
 license = {file = "LICENSE"}
 
