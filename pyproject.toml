@@ -19,7 +19,11 @@ dependencies = [
   "lmdeploy",
   "torch",
   "unidecode",
-  "scipy"
+  "scipy",
+  "gradio>=4.0.0",
+  "fastapi>=0.100.0",
+  "uvicorn[standard]>=0.23.0",
+  "pydantic>=2.0.0"
 ]
 license = {file = "LICENSE"}
 

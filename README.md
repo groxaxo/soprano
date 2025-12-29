@@ -47,6 +47,75 @@ pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu126
 
 ## Usage
 
+### Web Interface (Gradio)
+
+Launch the modern web interface with a single command:
+
+```bash
+python app.py
+```
+
+Then open your browser to `http://localhost:7860` to access the beautiful, user-friendly interface.
+
+**Features:**
+- 🎙️ Single text-to-speech generation with real-time preview
+- 📚 Batch generation for multiple texts
+- 🎛️ Advanced parameter controls (temperature, top-p, repetition penalty)
+- 💡 Built-in usage tips and documentation
+- 🎨 Modern, responsive design
+
+### API Server (FastAPI with OpenAI Compatibility)
+
+Start the FastAPI server with OpenAI-compatible endpoints:
+
+```bash
+python api_server.py
+```
+
+The server will be available at `http://localhost:8000` with the following endpoints:
+
+- **POST `/v1/audio/speech`**: OpenAI-compatible TTS endpoint
+- **GET `/health`**: Health check endpoint
+- **GET `/v1/models`**: List available models
+- **GET `/docs`**: Interactive API documentation
+
+**Example using curl:**
+
+```bash
+curl -X POST "http://localhost:8000/v1/audio/speech" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "soprano-80m",
+    "input": "Soprano is an extremely lightweight text to speech model.",
+    "voice": "default",
+    "response_format": "wav"
+  }' \
+  --output speech.wav
+```
+
+**Example using Python (OpenAI SDK compatible):**
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8000/v1/audio/speech",
+    json={
+        "model": "soprano-80m",
+        "input": "Hello from Soprano TTS!",
+        "voice": "default",
+        "temperature": 0.3,
+        "top_p": 0.95,
+        "repetition_penalty": 1.2
+    }
+)
+
+with open("output.wav", "wb") as f:
+    f.write(response.content)
+```
+
+### Python Library
+
 ```python
 from soprano import SopranoTTS
 
@@ -149,8 +218,9 @@ I’m a second-year undergrad who’s just started working on TTS models, so I w
 * [x] Add model and inference code
 * [x] Seamless streaming
 * [x] Batched inference
+* [x] Server / API inference (FastAPI with OpenAI compatibility)
+* [x] Web interface (Gradio)
 * [ ] Command-line interface (CLI)
-* [ ] Server / API inference
 * [ ] Additional LLM backends
 * [ ] CPU support
 * [ ] Voice cloning
