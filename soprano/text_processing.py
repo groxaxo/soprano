@@ -22,18 +22,18 @@ VALID_UNITS = {
     "in": "inch", "ft": "foot", "yd": "yard", "mi": "mile",
     "g": "gram", "kg": "kilogram", "mg": "milligram",
     "s": "second", "ms": "millisecond", "min": "minutes", "h": "hour",
-    "l": "liter", "ml": "mililiter", "cl": "centiliter", "dl": "deciliter",
+    "l": "liter", "ml": "milliliter", "cl": "centiliter", "dl": "deciliter",
     "kph": "kilometer per hour", "mph": "mile per hour", "mi/h": "mile per hour",
     "m/s": "meter per second", "km/h": "kilometer per hour",
-    "mm/s": "milimeter per second", "cm/s": "centimeter per second",
-    "ft/s": "feet per second", "cm/h": "centimeter per day",
+    "mm/s": "millimeter per second", "cm/s": "centimeter per second",
+    "ft/s": "feet per second", "cm/h": "centimeter per hour",
     "°c": "degree celsius", "c": "degree celsius",
     "°f": "degree fahrenheit", "f": "degree fahrenheit",
     "k": "kelvin",
     "pa": "pascal", "kpa": "kilopascal", "mpa": "megapascal", "atm": "atmosphere",
     "hz": "hertz", "khz": "kilohertz", "mhz": "megahertz", "ghz": "gigahertz",
-    "v": "volt", "kv": "kilovolt", "mv": "mergavolt",
-    "a": "amp", "ma": "megaamp", "ka": "kiloamp",
+    "v": "volt", "kv": "kilovolt", "mv": "millivolt",
+    "a": "amp", "ma": "milliamp", "ka": "kiloamp",
     "w": "watt", "kw": "kilowatt", "mw": "megawatt",
     "j": "joule", "kj": "kilojoule", "mj": "megajoule",
     "Ω": "ohm", "kΩ": "kiloohm", "mΩ": "megaohm",
@@ -121,7 +121,7 @@ def handle_numbers(n: re.Match[str]) -> str:
     number = n.group(2)
     try:
         number = float(number)
-    except:
+    except (ValueError, TypeError):
         return n.group()
     if n.group(1) == "-":
         number *= -1
@@ -144,7 +144,7 @@ def handle_money(m: re.Match[str]) -> str:
     number = m.group(3)
     try:
         number = float(number)
-    except:
+    except (ValueError, TypeError):
         return m.group()
     if m.group(1) == "-":
         number *= -1
