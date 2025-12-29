@@ -18,14 +18,16 @@ def pick_device(requested: str) -> str:
         # Soprano currently requires a CUDA GPU per README (CPU support coming later).
         print("ERROR: Soprano currently requires a CUDA GPU (CPU support is not available yet).", file=sys.stderr)
         sys.exit(1)
-    return requested  # allow advanced users to pass things like 'cuda:0'
+    # Only 'cuda' is supported by SopranoTTS, not 'cuda:0' or 'cuda:1'
+    print(f"ERROR: Device '{requested}' is not supported. Only 'cuda' is currently supported.", file=sys.stderr)
+    sys.exit(1)
 
 
 def main():
     ap = argparse.ArgumentParser(description="Run Soprano TTS on Linux (GTX 750-friendly settings).")
     ap.add_argument("--text", required=True, help="Text to synthesize.")
     ap.add_argument("--out", default="out.wav", help="Output WAV path (default: out.wav)")
-    ap.add_argument("--device", default="cuda", help="Device: cuda (default)")
+    ap.add_argument("--device", default="cuda", help="Device: cuda (default, only option supported)")
 
     # Force transformers backend for older GPUs (LMDeploy supports newer GPUs only).
     ap.add_argument("--backend", default="transformers", choices=["transformers", "auto"],
@@ -54,16 +56,8 @@ def main():
         sys.exit(1)
 
     if device.startswith("cuda"):
-        # Extract device index from device string (e.g., "cuda:1" -> 1)
-        device_index = 0
-        if ":" in device:
-            try:
-                device_index = int(device.split(":")[1])
-            except (ValueError, IndexError):
-                device_index = 0
-        
-        name = torch.cuda.get_device_name(device_index)
-        cc = torch.cuda.get_device_capability(device_index)
+        name = torch.cuda.get_device_name(0)
+        cc = torch.cuda.get_device_capability(0)
         print(f"CUDA device: {name} | compute capability: {cc[0]}.{cc[1]}")
         if args.backend == "auto":
             print("NOTE: backend=auto may try LMDeploy; on older GPUs it may fail. "
