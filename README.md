@@ -17,6 +17,8 @@ https://github.com/user-attachments/assets/525cf529-e79e-4368-809f-6be620852826
 
 With only **80M parameters**, Soprano achieves a real‑time factor (RTF) of **~2000×**, capable of generating **10 hours of audio in under 20 seconds**. Soprano uses a **seamless streaming** technique that enables true real‑time synthesis in **<15 ms**, multiple orders of magnitude faster than existing TTS pipelines.
 
+> **🚀 Quick Start**: Check out [QUICKSTART.md](QUICKSTART.md) for a comprehensive guide to get started with the web interface and API server!
+
 ---
 
 ## Installation
