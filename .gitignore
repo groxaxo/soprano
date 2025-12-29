@@ -3,3 +3,9 @@ test.py
 *.wav
 dist/
 *.egg-info/
+output.wav
+speech.wav
+*.pyc
+.venv/
+venv/
+env/
