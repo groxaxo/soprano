@@ -24,7 +24,7 @@ def pick_device(requested: str) -> str:
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Run Soprano TTS on Linux (GTX 750-friendly settings).")
+    ap = argparse.ArgumentParser(description="Run Soprano TTS (GTX 750-friendly settings).")
     ap.add_argument("--text", required=True, help="Text to synthesize.")
     ap.add_argument("--out", default="out.wav", help="Output WAV path (default: out.wav)")
     ap.add_argument("--device", default="cuda", help="Device: cuda (default, only option supported)")
@@ -57,6 +57,7 @@ def main():
     device = pick_device(args.device)
 
     if device.startswith("cuda"):
+        # Note: SopranoTTS only accepts 'cuda', not 'cuda:0' or 'cuda:1', so we always use device 0
         name = torch.cuda.get_device_name(0)
         cc = torch.cuda.get_device_capability(0)
         print(f"CUDA device: {name} | compute capability: {cc[0]}.{cc[1]}")
@@ -102,7 +103,7 @@ def main():
         
         audio = torch.cat(chunks)
 
-        # Save the concatenated audio chunks directly
+        # Save the concatenated audio chunks directly (32kHz sample rate is a key Soprano feature)
         wavfile.write(args.out, 32000, audio.cpu().numpy())
 
     print(f"Done. Wrote: {args.out}")
