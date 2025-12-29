@@ -5,6 +5,8 @@
 
   [![Alt Text](https://img.shields.io/badge/HuggingFace-Model-orange?logo=huggingface)](https://huggingface.co/ekwek/Soprano-80M)
   [![Alt Text](https://img.shields.io/badge/HuggingFace-Demo-yellow?logo=huggingface)](https://huggingface.co/spaces/ekwek/Soprano-TTS)
+  [![Alt Text](https://img.shields.io/badge/OpenAI_API-Compatible-green?logo=openai)](https://github.com/groxaxo/soprano)
+  [![Alt Text](https://img.shields.io/badge/FastAPI-Web_UI-blue?logo=fastapi)](https://github.com/groxaxo/soprano)
 </div>
 
 https://github.com/user-attachments/assets/525cf529-e79e-4368-809f-6be620852826
@@ -16,6 +18,14 @@ https://github.com/user-attachments/assets/525cf529-e79e-4368-809f-6be620852826
 **Soprano** is an ultra‑lightweight, open‑source text‑to‑speech (TTS) model designed for real‑time, high‑fidelity speech synthesis at unprecedented speed, all while remaining compact and easy to deploy at **under 1 GB VRAM usage**.
 
 With only **80M parameters**, Soprano achieves a real‑time factor (RTF) of **~2000×**, capable of generating **10 hours of audio in under 20 seconds**. Soprano uses a **seamless streaming** technique that enables true real‑time synthesis in **<15 ms**, multiple orders of magnitude faster than existing TTS pipelines.
+
+### 🆕 New Features
+
+- **OpenAI-Compatible API**: Drop-in replacement for OpenAI's TTS API endpoints
+- **Web Interface**: Built-in interactive demo UI
+- **FlashSR Super-Resolution**: Ultra-fast audio upsampling (32kHz → 48kHz) at 200-400x realtime
+- **Advanced Text Processing**: Automatic text normalization and sanitization for better pronunciation
+- **Multiple Audio Formats**: Supports Opus, WAV, and MP3 output
 
 ---
 
@@ -34,7 +44,7 @@ pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu126
 ### Install from source
 
 ```bash
-git clone https://github.com/ekwek1/soprano.git
+git clone https://github.com/groxaxo/soprano.git
 cd soprano
 pip install -e .
 pip uninstall -y torch
@@ -46,6 +56,8 @@ pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu126
 ---
 
 ## Usage
+
+### Python Library
 
 ```python
 from soprano import SopranoTTS
@@ -105,10 +117,150 @@ for chunk in stream:
 out = torch.cat(chunks)
 ```
 
+---
+
+## API Server
+
+### Quick Start
+
+Start the API server with default settings:
+
+```bash
+soprano-server
+```
+
+This will start the server on `http://0.0.0.0:8000` with:
+- **Web UI**: `http://localhost:8000`
+- **API Docs**: `http://localhost:8000/docs`
+- **OpenAI-compatible endpoint**: `http://localhost:8000/v1/audio/speech`
+
+### Server Options
+
+```bash
+soprano-server --help
+
+Options:
+  --host TEXT                Host to bind (default: 0.0.0.0)
+  --port INTEGER            Port to run on (default: 8000)
+  --device [cpu|cuda]       Device for inference (default: cuda)
+  --backend [auto|lmdeploy|transformers]  Backend to use (default: auto)
+  --cache-size-mb INTEGER   Cache size in MB (default: 10)
+  --decoder-batch-size INTEGER  Decoder batch size (default: 1)
+  --disable-flashsr         Disable FlashSR upsampling
+  --reload                  Enable auto-reload for development
+```
+
+### API Documentation
+
+#### 🗣️ Speech Generation
+
+**Endpoint**: `POST /v1/audio/speech`
+
+Generate audio from text with FlashSR super-resolution enabled by default (32kHz → 48kHz).
+
+```bash
+curl http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "tts-1",
+    "input": "Hello, this is Soprano TTS running locally!",
+    "voice": "soprano-default",
+    "response_format": "opus"
+  }' \
+  --output speech.opus
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `model` | `string` | Model identifier (e.g., `tts-1`). Required for compatibility. |
+| `input` | `string` | The text to generate audio for. |
+| `voice` | `string` | The voice ID to use (default: `soprano-default`). |
+| `response_format` | `string` | Output format: `opus`, `wav`, or `mp3` (default: `opus`). |
+| `speed` | `float` | Speed of generation (currently ignored). |
+
+#### 🎤 List Voices
+
+**Endpoint**: `GET /v1/audio/voices`
+
+Returns a list of available voices.
+
+```bash
+curl http://localhost:8000/v1/audio/voices
+```
+
+**Response:**
+```json
+{
+  "voices": [
+    {
+      "id": "soprano-default",
+      "name": "Soprano Default Voice",
+      "object": "voice",
+      "category": "soprano_tts"
+    }
+  ]
+}
+```
+
+#### 🏥 Health Check
+
+**Endpoint**: `GET /health`
+
+Check if the service is running.
+
+```bash
+curl http://localhost:8000/health
+```
+
+### Python Client Example
+
+```python
+import requests
+
+# Generate speech
+response = requests.post(
+    "http://localhost:8000/v1/audio/speech",
+    json={
+        "model": "tts-1",
+        "input": "Soprano is an extremely lightweight text to speech model.",
+        "response_format": "wav"
+    }
+)
+
+# Save to file
+with open("output.wav", "wb") as f:
+    f.write(response.content)
+```
+
+### FlashSR Audio Super-Resolution
+
+FlashSR is **enabled by default** to upsample audio from 32kHz to 48kHz at 200-400x realtime speed. This provides higher quality audio output with minimal performance impact.
+
+To disable FlashSR (output will be 32kHz):
+```bash
+soprano-server --disable-flashsr
+```
+
+Or via environment variable:
+```bash
+export ENABLE_FLASHSR=false
+soprano-server
+```
+
+**Benefits of FlashSR:**
+- Ultra-fast processing (200-400x realtime)
+- Higher quality 48kHz audio output
+- Lightweight processing
+- Compatible with Opus format for optimal compression
+
+---
+
 ## Usage tips:
 
 * Soprano works best when each sentence is between 2 and 15 seconds long.
-* Although Soprano recognizes numbers and some special characters, it occasionally mispronounces them. Best results can be achieved by converting these into their phonetic form. (1+1 -> one plus one, etc)
+* Text is automatically normalized for better pronunciation (numbers, URLs, emails, etc.)
 * If Soprano produces unsatisfactory results, you can easily regenerate it for a new, potentially better generation. You may also change the sampling settings for more varied results.
 * Avoid improper grammar such as not using contractions, multiple spaces, etc.
 
@@ -116,9 +268,9 @@ out = torch.cat(chunks)
 
 ## Key Features
 
-### 1. High‑fidelity 32 kHz audio
+### 1. High‑fidelity 32 kHz audio (48 kHz with FlashSR)
 
-Soprano synthesizes speech at **32 kHz**, delivering quality that is perceptually indistinguishable from 44.1/48 kHz audio and significantly sharper and clearer than the 24 kHz output used by many existing TTS models.
+Soprano synthesizes speech at **32 kHz**, delivering quality that is perceptually indistinguishable from 44.1/48 kHz audio and significantly sharper and clearer than the 24 kHz output used by many existing TTS models. With **FlashSR enabled**, output is upsampled to **48 kHz** for even higher quality.
 
 ### 2. Vocoder‑based neural decoder
 
@@ -149,8 +301,12 @@ I’m a second-year undergrad who’s just started working on TTS models, so I w
 * [x] Add model and inference code
 * [x] Seamless streaming
 * [x] Batched inference
-* [ ] Command-line interface (CLI)
-* [ ] Server / API inference
+* [x] Command-line interface (CLI)
+* [x] Server / API inference
+* [x] OpenAI-compatible API endpoints
+* [x] Web interface
+* [x] FlashSR audio super-resolution
+* [x] Advanced text processing and normalization
 * [ ] Additional LLM backends
 * [ ] CPU support
 * [ ] Voice cloning
@@ -165,6 +321,8 @@ Soprano uses and/or is inspired by the following projects:
 * [Vocos](https://github.com/gemelo-ai/vocos)
 * [XTTS](https://github.com/coqui-ai/TTS)
 * [LMDeploy](https://github.com/InternLM/lmdeploy)
+* [VibeVoice](https://github.com/microsoft/VibeVoice) - Text processing and FlashSR inspiration
+* [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) - API implementation inspiration
 
 ---
 
