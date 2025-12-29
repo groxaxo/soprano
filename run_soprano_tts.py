@@ -2,6 +2,7 @@
 import argparse
 import sys
 import torch
+from scipy.io import wavfile
 
 from soprano import SopranoTTS
 
@@ -41,6 +42,7 @@ def main():
 
     # Streaming mode (optional)
     ap.add_argument("--stream", action="store_true", help="Use streaming inference and then save WAV")
+    ap.add_argument("--chunk_size", type=int, default=1, help="Chunk size for streaming (default: 1)")
 
     args = ap.parse_args()
     device = pick_device(args.device)
@@ -52,8 +54,16 @@ def main():
         sys.exit(1)
 
     if device.startswith("cuda"):
-        name = torch.cuda.get_device_name(0)
-        cc = torch.cuda.get_device_capability(0)
+        # Extract device index from device string (e.g., "cuda:1" -> 1)
+        device_index = 0
+        if ":" in device:
+            try:
+                device_index = int(device.split(":")[1])
+            except (ValueError, IndexError):
+                device_index = 0
+        
+        name = torch.cuda.get_device_name(device_index)
+        cc = torch.cuda.get_device_capability(device_index)
         print(f"CUDA device: {name} | compute capability: {cc[0]}.{cc[1]}")
         if args.backend == "auto":
             print("NOTE: backend=auto may try LMDeploy; on older GPUs it may fail. "
@@ -82,7 +92,7 @@ def main():
         chunks = []
         stream = model.infer_stream(
             args.text,
-            chunk_size=1,
+            chunk_size=args.chunk_size,
             temperature=args.temperature,
             top_p=args.top_p,
             repetition_penalty=args.repetition_penalty,
@@ -90,13 +100,9 @@ def main():
         for chunk in stream:
             chunks.append(chunk)
         audio = torch.cat(chunks)
-
-        # If Soprano doesn't expose a dedicated save util, re-run infer to save.
-        # (Keeps this script compatible with the public README interface.)
-        _ = model.infer(args.text, args.out,
-                        temperature=args.temperature,
-                        top_p=args.top_p,
-                        repetition_penalty=args.repetition_penalty)
+        
+        # Save the concatenated audio chunks directly
+        wavfile.write(args.out, 32000, audio.cpu().numpy())
 
     print(f"Done. Wrote: {args.out}")
 
