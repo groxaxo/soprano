@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soprano TTS - Ultra-Realistic Text-to-Speech</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin: 5px;
+        }
+
+        .badges {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e0e0e0;
+        }
+
+        .audio-player {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+        }
+
+        .audio-player.show {
+            display: block;
+        }
+
+        audio {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+            margin-top: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            display: none;
+            padding: 15px;
+            background: #fee;
+            color: #c33;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .info {
+            background: #f0f7ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .info ul {
+            margin-left: 20px;
+            color: #555;
+        }
+
+        .info li {
+            margin: 5px 0;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .options {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Soprano TTS</h1>
+        <p class="subtitle">Instant, Ultra-Realistic Text-to-Speech</p>
+        
+        <div class="badges">
+            <span class="badge">~2000× Real-time</span>
+            <span class="badge">32/48 kHz Audio</span>
+            <span class="badge">80M Parameters</span>
+            <span class="badge">&lt;1 GB VRAM</span>
+        </div>
+
+        <div class="info">
+            <h3>✨ Usage Tips</h3>
+            <ul>
+                <li>Works best with sentences 2-15 seconds long</li>
+                <li>Convert numbers to words (1+1 → "one plus one")</li>
+                <li>Use proper grammar and avoid multiple spaces</li>
+                <li>FlashSR upsampling provides 48kHz high-quality audio</li>
+            </ul>
+        </div>
+
+        <div class="input-group">
+            <label for="text-input">Enter text to synthesize:</label>
+            <textarea 
+                id="text-input" 
+                placeholder="Soprano is an extremely lightweight text to speech model capable of generating high-fidelity speech at unprecedented speed."
+            ></textarea>
+        </div>
+
+        <div class="options">
+            <div class="input-group">
+                <label for="format-select">Audio Format:</label>
+                <select id="format-select">
+                    <option value="wav">WAV (High Quality)</option>
+                    <option value="opus" selected>Opus (Compressed)</option>
+                    <option value="mp3">MP3 (Universal)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="voice-select">Voice:</label>
+                <select id="voice-select">
+                    <option value="soprano-default">Soprano Default</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" id="generate-btn" onclick="generateSpeech()">
+                🎤 Generate Speech
+            </button>
+            <button class="btn-secondary" id="download-btn" onclick="downloadAudio()" disabled>
+                💾 Download Audio
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Generating speech...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="audio-player" id="audio-player">
+            <h3>🎧 Generated Audio:</h3>
+            <audio id="audio-element" controls></audio>
+        </div>
+    </div>
+
+    <script>
+        let currentAudioBlob = null;
+        let currentFormat = 'wav';
+
+        async function generateSpeech() {
+            const textInput = document.getElementById('text-input').value.trim();
+            const formatSelect = document.getElementById('format-select').value;
+            const voiceSelect = document.getElementById('voice-select').value;
+            
+            if (!textInput) {
+                showError('Please enter some text to generate speech.');
+                return;
+            }
+
+            // Hide previous results and errors
+            hideError();
+            hideAudioPlayer();
+            showLoading();
+            disableButtons(true);
+
+            try {
+                const response = await fetch('/v1/audio/speech', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: 'tts-1',
+                        input: textInput,
+                        voice: voiceSelect,
+                        response_format: formatSelect
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${errorText}`);
+                }
+
+                const audioBlob = await response.blob();
+                currentAudioBlob = audioBlob;
+                currentFormat = formatSelect;
+
+                // Create URL for audio player
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audioElement = document.getElementById('audio-element');
+                audioElement.src = audioUrl;
+
+                showAudioPlayer();
+                document.getElementById('download-btn').disabled = false;
+
+            } catch (error) {
+                showError(`Failed to generate speech: ${error.message}`);
+            } finally {
+                hideLoading();
+                disableButtons(false);
+            }
+        }
+
+        function downloadAudio() {
+            if (!currentAudioBlob) return;
+
+            const url = URL.createObjectURL(currentAudioBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            let extension = currentFormat;
+            if (currentFormat === 'opus') {
+                extension = 'opus';
+            }
+            
+            a.download = `soprano-speech-${Date.now()}.${extension}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function showLoading() {
+            document.getElementById('loading').classList.add('show');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+        }
+
+        function showAudioPlayer() {
+            document.getElementById('audio-player').classList.add('show');
+        }
+
+        function hideAudioPlayer() {
+            document.getElementById('audio-player').classList.remove('show');
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+        }
+
+        function hideError() {
+            document.getElementById('error').classList.remove('show');
+        }
+
+        function disableButtons(disabled) {
+            document.getElementById('generate-btn').disabled = disabled;
+            if (disabled) {
+                document.getElementById('download-btn').disabled = true;
+            }
+        }
+
+        // Allow Enter key to submit (with Shift+Enter for new line)
+        document.getElementById('text-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                generateSpeech();
+            }
+        });
+
+        // Load available voices on startup
+        async function loadVoices() {
+            try {
+                const response = await fetch('/v1/audio/voices');
+                if (response.ok) {
+                    const data = await response.json();
+                    const voiceSelect = document.getElementById('voice-select');
+                    voiceSelect.innerHTML = '';
+                    
+                    data.voices.forEach(voice => {
+                        const option = document.createElement('option');
+                        option.value = voice.id;
+                        option.textContent = voice.name;
+                        voiceSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load voices:', error);
+            }
+        }
+
+        // Load voices on page load
+        loadVoices();
+    </script>
+</body>
+</html>
