@@ -19,13 +19,7 @@ https://github.com/user-attachments/assets/525cf529-e79e-4368-809f-6be620852826
 
 With only **80M parameters**, Soprano achieves a real‑time factor (RTF) of **~2000×**, capable of generating **10 hours of audio in under 20 seconds**. Soprano uses a **seamless streaming** technique that enables true real‑time synthesis in **<15 ms**, multiple orders of magnitude faster than existing TTS pipelines.
 
-### 🆕 New Features
-
-- **OpenAI-Compatible API**: Drop-in replacement for OpenAI's TTS API endpoints
-- **Web Interface**: Built-in interactive demo UI
-- **FlashSR Super-Resolution**: Ultra-fast audio upsampling (32kHz → 48kHz) at 200-400x realtime
-- **Advanced Text Processing**: Automatic text normalization and sanitization for better pronunciation
-- **Multiple Audio Formats**: Supports Opus, WAV, and MP3 output
+> **🚀 Quick Start**: Check out [QUICKSTART.md](QUICKSTART.md) for a comprehensive guide to get started with the web interface and API server!
 
 ---
 
@@ -56,6 +50,73 @@ pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu126
 ---
 
 ## Usage
+
+### Web Interface (Gradio)
+
+Launch the modern web interface with a single command:
+
+```bash
+python app.py
+```
+
+Then open your browser to `http://localhost:7860` to access the beautiful, user-friendly interface.
+
+**Features:**
+- 🎙️ Single text-to-speech generation with real-time preview
+- 📚 Batch generation for multiple texts
+- 🎛️ Advanced parameter controls (temperature, top-p, repetition penalty)
+- 💡 Built-in usage tips and documentation
+- 🎨 Modern, responsive design
+
+### API Server (FastAPI with OpenAI Compatibility)
+
+Start the FastAPI server with OpenAI-compatible endpoints:
+
+```bash
+python api_server.py
+```
+
+The server will be available at `http://localhost:8000` with the following endpoints:
+
+- **POST `/v1/audio/speech`**: OpenAI-compatible TTS endpoint
+- **GET `/health`**: Health check endpoint
+- **GET `/v1/models`**: List available models
+- **GET `/docs`**: Interactive API documentation
+
+**Example using curl:**
+
+```bash
+curl -X POST "http://localhost:8000/v1/audio/speech" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "soprano-80m",
+    "input": "Soprano is an extremely lightweight text to speech model.",
+    "voice": "default",
+    "response_format": "wav"
+  }' \
+  --output speech.wav
+```
+
+**Example using Python (OpenAI SDK compatible):**
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8000/v1/audio/speech",
+    json={
+        "model": "soprano-80m",
+        "input": "Hello from Soprano TTS!",
+        "voice": "default",
+        "temperature": 0.3,
+        "top_p": 0.95,
+        "repetition_penalty": 1.2
+    }
+)
+
+with open("output.wav", "wb") as f:
+    f.write(response.content)
+```
 
 ### Python Library
 
@@ -301,12 +362,9 @@ I’m a second-year undergrad who’s just started working on TTS models, so I w
 * [x] Add model and inference code
 * [x] Seamless streaming
 * [x] Batched inference
-* [x] Command-line interface (CLI)
-* [x] Server / API inference
-* [x] OpenAI-compatible API endpoints
-* [x] Web interface
-* [x] FlashSR audio super-resolution
-* [x] Advanced text processing and normalization
+* [x] Server / API inference (FastAPI with OpenAI compatibility)
+* [x] Web interface (Gradio)
+* [ ] Command-line interface (CLI)
 * [ ] Additional LLM backends
 * [ ] CPU support
 * [ ] Voice cloning

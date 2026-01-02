@@ -1,82 +1,118 @@
 # Soprano TTS Examples
 
-This directory contains example scripts demonstrating how to use Soprano TTS with the new API features.
+This directory contains example scripts demonstrating how to use Soprano TTS in different ways.
 
-## Files
+## API Example (`api_example.py`)
 
-### `usage_example.py`
+Demonstrates how to interact with the Soprano TTS FastAPI server.
 
-Demonstrates basic usage of the Soprano TTS library:
-- Text normalization
-- FlashSR upsampling
-- Sentence splitting
-- Direct Python API usage
+### Prerequisites
 
-**Requirements:**
-- Soprano TTS installed
-- CUDA-enabled GPU (or CPU for slower inference)
+Make sure the API server is running:
 
-**Usage:**
 ```bash
-python examples/usage_example.py
+python api_server.py
 ```
 
-### `api_client_example.py`
+The server will start on `http://localhost:8000`.
 
-Demonstrates how to use the OpenAI-compatible REST API:
-- Health check endpoint
-- List available voices
-- Generate speech in different formats (WAV, Opus, MP3)
+### Usage
 
-**Requirements:**
-- Soprano server running: `soprano-server`
-- `requests` library: `pip install requests`
+**Test the API server:**
 
-**Usage:**
 ```bash
-# Terminal 1: Start the server
-soprano-server
-
-# Terminal 2: Run the example
-python examples/api_client_example.py
+python examples/api_example.py --test
 ```
 
-## Quick Start
+**Generate speech:**
 
-1. **Install Soprano TTS:**
-   ```bash
-   pip install soprano-tts
-   ```
+```bash
+python examples/api_example.py --text "Hello from Soprano TTS!"
+```
 
-2. **Install torch (if not already installed):**
-   ```bash
-   pip install torch --index-url https://download.pytorch.org/whl/cu126
-   ```
+**Generate with custom parameters:**
 
-3. **Start the API server:**
-   ```bash
-   soprano-server --port 8000
-   ```
+```bash
+python examples/api_example.py \
+  --text "This is a test with custom settings." \
+  --temperature 0.5 \
+  --top_p 0.9 \
+  --repetition_penalty 1.3 \
+  --output custom_output.wav
+```
 
-4. **Open the web interface:**
-   Navigate to `http://localhost:8000` in your browser
+**Use a remote server:**
 
-5. **Or use the API programmatically:**
-   ```bash
-   python examples/api_client_example.py
-   ```
+```bash
+python examples/api_example.py \
+  --text "Remote TTS generation" \
+  --url http://remote-server:8000
+```
+
+## Using the API with cURL
+
+You can also use the API directly with cURL:
+
+```bash
+curl -X POST "http://localhost:8000/v1/audio/speech" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "soprano-80m",
+    "input": "Hello from Soprano TTS!",
+    "voice": "default",
+    "temperature": 0.3,
+    "top_p": 0.95,
+    "repetition_penalty": 1.2
+  }' \
+  --output speech.wav
+```
+
+## Using the API with Python requests
+
+```python
+import requests
+
+# Generate speech
+response = requests.post(
+    "http://localhost:8000/v1/audio/speech",
+    json={
+        "model": "soprano-80m",
+        "input": "Hello from Soprano TTS!",
+        "voice": "default",
+        "temperature": 0.3,
+        "top_p": 0.95,
+        "repetition_penalty": 1.2
+    }
+)
+
+# Save to file
+with open("output.wav", "wb") as f:
+    f.write(response.content)
+```
+
+## OpenAI SDK Compatibility
+
+The API is designed to be compatible with OpenAI's TTS API format. While you can't use the OpenAI SDK directly (it requires authentication), you can use the same request format:
+
+```python
+import requests
+
+# Similar to OpenAI's API
+response = requests.post(
+    "http://localhost:8000/v1/audio/speech",
+    json={
+        "model": "soprano-80m",  # or "tts-1", "tts-1-hd"
+        "input": "Your text here",
+        "voice": "default",  # or OpenAI voices: "alloy", "echo", etc.
+    }
+)
+```
 
 ## API Endpoints
 
-- **Web UI**: `http://localhost:8000/`
-- **API Docs**: `http://localhost:8000/docs`
-- **Speech Generation**: `POST http://localhost:8000/v1/audio/speech`
-- **List Voices**: `GET http://localhost:8000/v1/audio/voices`
-- **Health Check**: `GET http://localhost:8000/health`
-
-## Notes
-
-- The API is compatible with OpenAI's TTS API format
-- FlashSR upsampling is enabled by default (32kHz → 48kHz)
-- Text is automatically normalized for better pronunciation
-- Multiple output formats are supported: WAV, Opus, MP3
+- `POST /v1/audio/speech` - Generate speech (OpenAI-compatible)
+- `GET /health` - Health check
+- `GET /v1/models` - List available models
+- `GET /` - API information
+- `GET /docs` - Interactive API documentation
+- `GET /redoc` - Alternative API documentation
