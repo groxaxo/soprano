@@ -9,6 +9,11 @@ import os
 import time
 
 
+# Constants for Soprano TTS
+SAMPLE_RATE = 32000  # Audio sample rate in Hz
+HIDDEN_DIM = 512  # Hidden dimension for transformer models
+
+
 class SopranoTTS:
     def __init__(self,
             backend='auto',
@@ -183,7 +188,7 @@ class SopranoTTS:
             repetition_penalty=repetition_penalty,
             out_dir=None)[0]
         if out_path:
-            wavfile.write(out_path, 32000, results.cpu().numpy())
+            wavfile.write(out_path, SAMPLE_RATE, results.cpu().numpy())
         return results
 
     def infer_batch(self,
@@ -224,7 +229,7 @@ class SopranoTTS:
             N = len(lengths)
             for i in range(N):
                 batch_hidden_states.append(torch.cat([
-                    torch.zeros((1, 512, lengths[0]-lengths[i]), device='cuda'),
+                    torch.zeros((1, HIDDEN_DIM, lengths[0]-lengths[i]), device='cuda'),
                     hidden_states[idx+i].unsqueeze(0).transpose(1,2).cuda().to(torch.float32),
                 ], dim=2))
             batch_hidden_states = torch.cat(batch_hidden_states)
@@ -240,7 +245,7 @@ class SopranoTTS:
         if out_dir:
             os.makedirs(out_dir, exist_ok=True)
             for i in range(len(audio_concat)):
-                wavfile.write(f"{out_dir}/{i}.wav", 32000, audio_concat[i].cpu().numpy())
+                wavfile.write(f"{out_dir}/{i}.wav", SAMPLE_RATE, audio_concat[i].cpu().numpy())
         return audio_concat
 
     def infer_stream(self,
@@ -345,7 +350,7 @@ class SopranoTTS:
         
         return {
             'audio': audio,
-            'sample_rate': 32000,
+            'sample_rate': SAMPLE_RATE,
         }
     
     def _preprocess_text_simple(self, text):
@@ -426,10 +431,10 @@ class SopranoTTS:
                 # Second output contains hidden states from the last layer
                 # Shape: [batch, seq_len, hidden_dim]
                 token_hidden = outputs[1][0, -1, :]
-                if token_hidden.shape[0] == 512:  # Verify expected hidden dim
+                if token_hidden.shape[0] == HIDDEN_DIM:  # Verify expected hidden dim
                     hidden_states_list.append(token_hidden)
                 else:
-                    print(f"Warning: Unexpected hidden state dimension {token_hidden.shape[0]}, expected 512")
+                    print(f"Warning: Unexpected hidden state dimension {token_hidden.shape[0]}, expected {HIDDEN_DIM}")
             
             # Update sequences for next iteration
             input_ids = np.concatenate([input_ids, [[next_token]]], axis=1)
@@ -448,9 +453,9 @@ class SopranoTTS:
     
     def _decode_audio(self, hidden_states):
         """Decode hidden states to audio waveform."""
-        # Prepare input for decoder: [batch=1, channels=512, seq_len]
+        # Prepare input for decoder: [batch=1, channels=HIDDEN_DIM, seq_len]
         if len(hidden_states.shape) == 2:
-            hidden_states = hidden_states.T[np.newaxis, :, :]  # [1, 512, seq_len]
+            hidden_states = hidden_states.T[np.newaxis, :, :]  # [1, HIDDEN_DIM, seq_len]
         
         # Run decoder inference
         if self.backend == 'onnx_cpu':
