@@ -27,6 +27,12 @@ dependencies = [
 ]
 license = {file = "LICENSE"}
 
+[project.optional-dependencies]
+onnx = [
+  "onnxruntime>=1.16.0",
+  "transformers>=4.30.0"
+]
+
 [project.urls]
 Homepage = "https://github.com/ekwek1/soprano"
 Issues = "https://github.com/ekwek1/soprano/issues"

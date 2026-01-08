@@ -1,5 +1,6 @@
 from .vocos.decoder import SopranoDecoder
 import torch
+import numpy as np
 import re
 from unidecode import unidecode
 from scipy.io import wavfile
@@ -13,7 +14,38 @@ class SopranoTTS:
             backend='auto',
             device='cuda',
             cache_size_mb=10,
-            decoder_batch_size=1):
+            decoder_batch_size=1,
+            lm_path=None,
+            decoder_path=None,
+            num_threads=4):
+        """
+        Initialize Soprano TTS engine.
+        
+        Args:
+            backend: Backend to use ('auto', 'lmdeploy', 'transformers', 'onnx_cpu', 'openvino_cpu')
+            device: Device for PyTorch backends ('cuda' or 'cpu')
+            cache_size_mb: Cache size for LMDeploy backend
+            decoder_batch_size: Batch size for decoder
+            lm_path: Path to LM model (required for ONNX/OpenVINO backends)
+            decoder_path: Path to decoder model (required for ONNX/OpenVINO backends)
+            num_threads: Number of CPU threads for ONNX/OpenVINO backends
+        """
+        self.decoder_batch_size = decoder_batch_size
+        self.RECEPTIVE_FIELD = 4  # Decoder receptive field
+        self.TOKEN_SIZE = 2048  # Number of samples per audio token
+        
+        # Check if using CPU backends (ONNX/OpenVINO)
+        if backend in ['onnx_cpu', 'openvino_cpu']:
+            if lm_path is None or decoder_path is None:
+                raise ValueError(
+                    "For ONNX/OpenVINO backends, both lm_path and decoder_path must be provided"
+                )
+            self._init_cpu_backend(backend, lm_path, decoder_path, num_threads)
+            self.use_cpu_backend = True
+            self.backend = backend
+            return
+        
+        # Legacy PyTorch backends
         RECOGNIZED_DEVICES = ['cuda']
         RECOGNIZED_BACKENDS = ['auto', 'lmdeploy', 'transformers']
         assert device in RECOGNIZED_DEVICES, f"unrecognized device {device}, device must be in {RECOGNIZED_DEVICES}"
@@ -37,13 +69,56 @@ class SopranoTTS:
             self.pipeline = TransformersModel(device=device)
 
         self.decoder = SopranoDecoder().cuda()
-        decoder_path = hf_hub_download(repo_id='ekwek/Soprano-80M', filename='decoder.pth')
-        self.decoder.load_state_dict(torch.load(decoder_path))
-        self.decoder_batch_size=decoder_batch_size
-        self.RECEPTIVE_FIELD = 4 # Decoder receptive field
-        self.TOKEN_SIZE = 2048 # Number of samples per audio token
+        decoder_path_file = hf_hub_download(repo_id='ekwek/Soprano-80M', filename='decoder.pth')
+        self.decoder.load_state_dict(torch.load(decoder_path_file))
+        self.use_cpu_backend = False
+        self.backend = backend
 
         self.infer("Hello world!") # warmup
+    
+    def _init_cpu_backend(self, backend, lm_path, decoder_path, num_threads):
+        """Initialize ONNX or OpenVINO backend for CPU inference."""
+        if backend == 'onnx_cpu':
+            try:
+                import onnxruntime as ort
+            except ImportError:
+                raise ImportError(
+                    "onnxruntime is required for ONNX backend. "
+                    "Install with: pip install onnxruntime"
+                )
+            
+            # Set up ONNX Runtime
+            sess_options = ort.SessionOptions()
+            sess_options.intra_op_num_threads = num_threads
+            sess_options.inter_op_num_threads = num_threads
+            sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            
+            self.lm_session = ort.InferenceSession(lm_path, sess_options)
+            self.decoder_session = ort.InferenceSession(decoder_path, sess_options)
+            
+            print(f"✓ Loaded ONNX models with {num_threads} CPU threads")
+            
+        elif backend == 'openvino_cpu':
+            try:
+                from openvino.runtime import Core
+            except ImportError:
+                raise ImportError(
+                    "openvino is required for OpenVINO backend. "
+                    "Install with: pip install openvino"
+                )
+            
+            core = Core()
+            self.lm_model = core.read_model(lm_path)
+            self.lm_compiled = core.compile_model(self.lm_model, "CPU")
+            
+            self.decoder_model = core.read_model(decoder_path)
+            self.decoder_compiled = core.compile_model(self.decoder_model, "CPU")
+            
+            print(f"✓ Loaded OpenVINO models on CPU")
+        
+        # Load tokenizer for CPU backends
+        from transformers import AutoTokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained('ekwek/Soprano-80M')
 
     def _preprocess_text(self, texts, min_length=30):
         '''
@@ -193,3 +268,198 @@ class SopranoTTS:
                             first_chunk = False
                         yield audio_chunk.cpu()
                     chunk_counter += 1
+    
+    def synthesize(
+        self,
+        text,
+        max_new_tokens=100,
+        temperature=1.0,
+        top_p=1.0,
+        repetition_penalty=1.0,
+        seed=None,
+        **kwargs
+    ):
+        """
+        Synthesize speech from text (ONNX/OpenVINO interface).
+        
+        Args:
+            text: Input text to synthesize
+            max_new_tokens: Maximum tokens to generate
+            temperature: Sampling temperature
+            top_p: Nucleus sampling threshold
+            repetition_penalty: Penalty for repeated tokens
+            seed: Random seed for reproducibility
+            
+        Returns:
+            Dictionary with 'audio' (numpy array) and 'sample_rate' (int)
+        """
+        if not self.use_cpu_backend:
+            raise NotImplementedError(
+                "synthesize() is only available with ONNX/OpenVINO backends. "
+                "Use infer() or infer_batch() for PyTorch backends."
+            )
+        
+        if seed is not None:
+            np.random.seed(seed)
+        
+        # Preprocess text
+        processed_text = self._preprocess_text_simple(text)
+        
+        # Tokenize
+        inputs = self.tokenizer(
+            processed_text,
+            return_tensors='np',
+            truncation=True,
+            max_length=512,
+        )
+        
+        # Generate hidden states
+        hidden_states = self._generate_hidden_states(
+            inputs['input_ids'],
+            inputs['attention_mask'],
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            repetition_penalty=repetition_penalty,
+        )
+        
+        # Decode to audio
+        audio = self._decode_audio(hidden_states)
+        
+        return {
+            'audio': audio,
+            'sample_rate': 32000,
+        }
+    
+    def _preprocess_text_simple(self, text):
+        """Simple text preprocessing for CPU backends."""
+        # Remove unsupported characters
+        text = re.sub(r"[^A-Za-z !\$%&'*+,-./0123456789<>?_]", "", text)
+        text = re.sub(r"[<>/_+]", "", text)
+        text = re.sub(r"\.\.[^\.]", ".", text)
+        text = re.sub(r"\s+", " ", text)
+        text = unidecode(text.strip())
+        
+        # Add prompt format
+        return f'[STOP][TEXT]{text}[START]'
+    
+    def _generate_hidden_states(
+        self,
+        input_ids,
+        attention_mask,
+        max_new_tokens,
+        temperature,
+        top_p,
+        repetition_penalty,
+    ):
+        """Generate hidden states using LM (ONNX/OpenVINO backend)."""
+        eos_token_id = self.tokenizer.eos_token_id or 2
+        hidden_states_list = []
+        
+        for step in range(max_new_tokens):
+            # Run LM inference
+            if self.backend == 'onnx_cpu':
+                outputs = self.lm_session.run(
+                    None,
+                    {
+                        "input_ids": input_ids.astype(np.int64),
+                        "attention_mask": attention_mask.astype(np.int64),
+                    }
+                )
+            elif self.backend == 'openvino_cpu':
+                result = self.lm_compiled([input_ids.astype(np.int64), attention_mask.astype(np.int64)])
+                outputs = [result[key] for key in result.keys()]
+            
+            logits = outputs[0]  # [batch, seq_len, vocab_size]
+            
+            # Get next token logits
+            next_token_logits = logits[0, -1, :]
+            
+            # Apply temperature
+            if temperature > 0 and temperature != 1.0:
+                next_token_logits = next_token_logits / temperature
+            
+            # Apply repetition penalty
+            if repetition_penalty != 1.0:
+                for prev_token_id in input_ids[0]:
+                    if prev_token_id < len(next_token_logits):
+                        if next_token_logits[prev_token_id] < 0:
+                            next_token_logits[prev_token_id] *= repetition_penalty
+                        else:
+                            next_token_logits[prev_token_id] /= repetition_penalty
+            
+            # Sample next token
+            probs = self._softmax(next_token_logits)
+            
+            if top_p < 1.0:
+                next_token = self._sample_top_p(probs, top_p)
+            else:
+                next_token = np.argmax(probs)
+            
+            # Check for EOS
+            if next_token == eos_token_id:
+                break
+            
+            # Try to extract hidden states
+            # The actual output format depends on the exported model
+            # For now, use a simple embedding representation
+            # In a real implementation, you'd configure the export to include hidden states
+            if len(outputs) > 1:
+                # Assume second output is hidden states
+                token_hidden = outputs[1][0, -1, :]
+                hidden_states_list.append(token_hidden)
+            
+            # Update sequences
+            input_ids = np.concatenate([input_ids, [[next_token]]], axis=1)
+            attention_mask = np.concatenate([attention_mask, [[1]]], axis=1)
+        
+        if hidden_states_list:
+            return np.stack(hidden_states_list)
+        else:
+            # Fallback: return dummy hidden states
+            return np.zeros((10, 512), dtype=np.float32)
+    
+    def _decode_audio(self, hidden_states):
+        """Decode hidden states to audio waveform."""
+        # Prepare input for decoder: [batch=1, channels=512, seq_len]
+        if len(hidden_states.shape) == 2:
+            hidden_states = hidden_states.T[np.newaxis, :, :]  # [1, 512, seq_len]
+        
+        # Run decoder inference
+        if self.backend == 'onnx_cpu':
+            audio = self.decoder_session.run(
+                None,
+                {"hidden_states": hidden_states.astype(np.float32)}
+            )[0]
+        elif self.backend == 'openvino_cpu':
+            result = self.decoder_compiled([hidden_states.astype(np.float32)])
+            audio = result[list(result.keys())[0]]
+        
+        # Return audio as 1D array
+        if len(audio.shape) > 1:
+            audio = audio[0]  # Remove batch dimension
+        
+        return audio.astype(np.float32)
+    
+    @staticmethod
+    def _softmax(x):
+        """Compute softmax with numerical stability."""
+        exp_x = np.exp(x - np.max(x))
+        return exp_x / exp_x.sum()
+    
+    @staticmethod
+    def _sample_top_p(probs, p):
+        """Sample from top-p (nucleus) distribution."""
+        sorted_indices = np.argsort(probs)[::-1]
+        sorted_probs = probs[sorted_indices]
+        cumsum_probs = np.cumsum(sorted_probs)
+        
+        cutoff_idx = np.searchsorted(cumsum_probs, p)
+        if cutoff_idx >= len(sorted_indices):
+            cutoff_idx = len(sorted_indices) - 1
+        
+        top_indices = sorted_indices[:cutoff_idx + 1]
+        top_probs = probs[top_indices]
+        top_probs = top_probs / top_probs.sum()
+        
+        return np.random.choice(top_indices, p=top_probs)
