@@ -418,14 +418,13 @@ class SopranoTTS:
                 break
             
             # Extract hidden states from the model output
-            # NOTE: The current LM export (lm_step_export.py) may not properly export
-            # hidden states. For production use, the export script should be updated to
-            # explicitly output the last hidden layer states. Currently, we attempt to
-            # use the second output if available, or fall back to using a simplified
-            # representation.
+            # The LM export script (lm_step_export.py) uses a wrapper model to ensure
+            # hidden states are properly exported as the second output. The wrapper calls
+            # the base model with output_hidden_states=True and returns both logits and
+            # the last hidden layer.
             if len(outputs) > 1:
-                # Assume second output contains hidden states from the last layer
-                # Shape should be [batch, seq_len, hidden_dim]
+                # Second output contains hidden states from the last layer
+                # Shape: [batch, seq_len, hidden_dim]
                 token_hidden = outputs[1][0, -1, :]
                 if token_hidden.shape[0] == 512:  # Verify expected hidden dim
                     hidden_states_list.append(token_hidden)

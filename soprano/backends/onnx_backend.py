@@ -274,7 +274,16 @@ class ONNXModel(BaseModel):
 
 
 class OpenVINOModel(BaseModel):
-    """OpenVINO backend for optimized CPU inference."""
+    """
+    OpenVINO backend for optimized CPU inference.
+    
+    NOTE: This is a partial implementation. The infer() and stream_infer()
+    methods are not yet implemented. Use the ONNXModel backend for full
+    functionality. OpenVINO support is planned for future releases.
+    
+    For now, this class only initializes the OpenVINO runtime and loads
+    the models. Inference methods will raise NotImplementedError.
+    """
     
     def __init__(
         self,

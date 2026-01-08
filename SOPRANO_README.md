@@ -164,8 +164,10 @@ tts = SopranoTTS(
 
 ### ONNX Runtime vs. OpenVINO
 
-- **ONNX Runtime**: Easy to use, good cross-platform compatibility
-- **OpenVINO**: Optimized for Intel CPUs, typically 1.5-3x faster than ONNX Runtime
+- **ONNX Runtime**: Fully implemented, easy to use, good cross-platform compatibility
+- **OpenVINO**: Partially implemented (model loading only). Full inference support coming in future releases. Expected to be 1.5-3x faster than ONNX Runtime on Intel CPUs once completed.
+
+**Note**: For now, use `backend='onnx_cpu'` for actual inference. The `openvino_cpu` backend can load models but does not yet support inference operations.
 
 ### Thread Count
 
@@ -195,9 +197,10 @@ Control the quality and diversity of generated speech:
 Current limitations of CPU inference:
 
 1. **Slower than GPU**: CPU inference is typically 5-10x slower than GPU inference
-2. **No streaming support**: The CPU backend currently only supports batch inference
+2. **No streaming support**: The CPU backend currently only supports batch inference via `synthesize()`
 3. **Model export required**: You must export models before using CPU inference
-4. **Hidden state extraction**: The current implementation may need refinement for optimal hidden state extraction from the LM
+4. **OpenVINO incomplete**: The OpenVINO backend is partially implemented (model loading only, no inference yet)
+5. **ONNX Runtime recommended**: Use `backend='onnx_cpu'` for production use
 
 ## Troubleshooting
 

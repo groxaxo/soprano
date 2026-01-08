@@ -3,7 +3,7 @@
 Run Soprano TTS on the CPU using ONNX models.
 
 This script demonstrates how to synthesize Spanish speech using the
-Soprano TTS interface included in the `finetune‑hf‑vits` repository.  It
+Soprano TTS interface included in the `finetune-hf-vits` repository.  It
 assumes that you have already exported the Soprano language model (LM)
 and decoder to ONNX format using the export scripts described in the
 project documentation.  See `README.md` for full instructions on exporting
