@@ -171,6 +171,12 @@ class SopranoTTS:
             top_p=0.95,
             temperature=0.3,
             repetition_penalty=1.2):
+        if self.use_cpu_backend:
+            raise NotImplementedError(
+                "infer() is not available with ONNX/OpenVINO backends. "
+                "Use synthesize() instead."
+            )
+        
         results = self.infer_batch([text],
             top_p=top_p,
             temperature=temperature,
@@ -186,6 +192,12 @@ class SopranoTTS:
             top_p=0.95,
             temperature=0.3,
             repetition_penalty=1.2):
+        if self.use_cpu_backend:
+            raise NotImplementedError(
+                "infer_batch() is not available with ONNX/OpenVINO backends. "
+                "Use synthesize() instead."
+            )
+        
         sentence_data = self._preprocess_text(texts)
         prompts = list(map(lambda x: x[0], sentence_data))
         responses = self.pipeline.infer(prompts,
@@ -237,6 +249,11 @@ class SopranoTTS:
             top_p=0.95,
             temperature=0.3,
             repetition_penalty=1.2):
+        if self.use_cpu_backend:
+            raise NotImplementedError(
+                "infer_stream() is not available with ONNX/OpenVINO backends."
+            )
+        
         start_time = time.time()
         sentence_data = self._preprocess_text([text])
 
