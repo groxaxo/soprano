@@ -46,7 +46,7 @@ import scipy.io.wavfile
 
 
 def parse_args() -> argparse.Namespace:
-    """Parse command‑line arguments."""
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Synthesize speech with Soprano TTS on CPU")
     parser.add_argument("--lm", required=True, help="Path to the LM ONNX or OpenVINO model")
     parser.add_argument("--decoder", required=True, help="Path to the decoder ONNX or OpenVINO model")

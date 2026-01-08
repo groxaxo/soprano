@@ -54,10 +54,31 @@ def main() -> None:
     args = parse_args()
     
     print(f"Loading language model from {args.repo_id}...")
-    model = AutoModelForCausalLM.from_pretrained(
+    base_model = AutoModelForCausalLM.from_pretrained(
         args.repo_id,
         torch_dtype=torch.float32,
     )
+    base_model.eval()
+    
+    # Create a wrapper model that outputs both logits and hidden states
+    class ModelWithHiddenStates(torch.nn.Module):
+        def __init__(self, model):
+            super().__init__()
+            self.model = model
+        
+        def forward(self, input_ids, attention_mask):
+            outputs = self.model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                output_hidden_states=True,
+                return_dict=True,
+            )
+            # Return logits and last hidden state
+            # logits: [batch, seq_len, vocab_size]
+            # hidden_states: [batch, seq_len, hidden_dim]
+            return outputs.logits, outputs.hidden_states[-1]
+    
+    model = ModelWithHiddenStates(base_model)
     model.eval()
     
     # Create dummy inputs for a single forward pass
@@ -65,10 +86,11 @@ def main() -> None:
     # attention_mask: (batch_size, sequence_length)
     batch_size = 1
     seq_length = 10
-    dummy_input_ids = torch.randint(0, model.config.vocab_size, (batch_size, seq_length))
+    dummy_input_ids = torch.randint(0, base_model.config.vocab_size, (batch_size, seq_length))
     dummy_attention_mask = torch.ones(batch_size, seq_length, dtype=torch.long)
     
     print(f"Exporting language model to ONNX (opset {args.opset})...")
+    print("  Model will output both logits and hidden states...")
     torch.onnx.export(
         model,
         (dummy_input_ids, dummy_attention_mask),
@@ -89,7 +111,7 @@ def main() -> None:
     print(f"  Input: input_ids [batch_size, sequence_length]")
     print(f"  Input: attention_mask [batch_size, sequence_length]")
     print(f"  Output: logits [batch_size, sequence_length, vocab_size]")
-    print(f"  Output: hidden_states (last layer)")
+    print(f"  Output: hidden_states [batch_size, sequence_length, hidden_dim]")
 
 
 if __name__ == "__main__":

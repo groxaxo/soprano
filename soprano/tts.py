@@ -417,24 +417,35 @@ class SopranoTTS:
             if next_token == eos_token_id:
                 break
             
-            # Try to extract hidden states
-            # The actual output format depends on the exported model
-            # For now, use a simple embedding representation
-            # In a real implementation, you'd configure the export to include hidden states
+            # Extract hidden states from the model output
+            # NOTE: The current LM export (lm_step_export.py) may not properly export
+            # hidden states. For production use, the export script should be updated to
+            # explicitly output the last hidden layer states. Currently, we attempt to
+            # use the second output if available, or fall back to using a simplified
+            # representation.
             if len(outputs) > 1:
-                # Assume second output is hidden states
+                # Assume second output contains hidden states from the last layer
+                # Shape should be [batch, seq_len, hidden_dim]
                 token_hidden = outputs[1][0, -1, :]
-                hidden_states_list.append(token_hidden)
+                if token_hidden.shape[0] == 512:  # Verify expected hidden dim
+                    hidden_states_list.append(token_hidden)
+                else:
+                    print(f"Warning: Unexpected hidden state dimension {token_hidden.shape[0]}, expected 512")
             
-            # Update sequences
+            # Update sequences for next iteration
             input_ids = np.concatenate([input_ids, [[next_token]]], axis=1)
             attention_mask = np.concatenate([attention_mask, [[1]]], axis=1)
         
         if hidden_states_list:
             return np.stack(hidden_states_list)
         else:
-            # Fallback: return dummy hidden states
-            return np.zeros((10, 512), dtype=np.float32)
+            # If no hidden states were extracted, raise an error instead of silently failing
+            raise RuntimeError(
+                "Failed to extract hidden states from the language model. "
+                "This likely means the LM export script needs to be updated to properly "
+                "export hidden states. Please ensure lm_step_export.py is configured to "
+                "output the last hidden layer states as the second output."
+            )
     
     def _decode_audio(self, hidden_states):
         """Decode hidden states to audio waveform."""
