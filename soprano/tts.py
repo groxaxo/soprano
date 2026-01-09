@@ -105,7 +105,8 @@ class SopranoTTS:
             
         elif backend == 'openvino_cpu':
             try:
-                from openvino.runtime import Core, properties
+                from openvino.runtime import Core
+                from openvino.runtime import properties
             except ImportError:
                 raise ImportError(
                     "openvino is required for OpenVINO backend. "
@@ -117,7 +118,7 @@ class SopranoTTS:
             
             # Configure CPU inference settings
             config = {
-                properties.inference_num_threads(): num_threads,
+                properties.inference_num_threads(): num_threads
             }
             
             # Load and compile models with configuration
@@ -451,7 +452,7 @@ class SopranoTTS:
                 if token_hidden.shape[0] != HIDDEN_DIM:
                     raise RuntimeError(
                         f"Unexpected hidden state dimension {token_hidden.shape[0]}, expected {HIDDEN_DIM}. "
-                        "Please verify the LM model was exported correctly with lm_step_export.py"
+                        "Please verify the LM model was exported correctly with soprano/export/lm_step_export.py"
                     )
                 hidden_states_list.append(token_hidden)
             else:
@@ -491,7 +492,8 @@ class SopranoTTS:
             )
         
         # Prepare input for decoder: [batch=1, channels=HIDDEN_DIM, seq_len]
-        # Transpose from [seq_len, hidden_dim] to [hidden_dim, seq_len]
+        # Input is validated to be [seq_len, hidden_dim], transpose to [hidden_dim, seq_len]
+        # and add batch dimension
         hidden_states = hidden_states.T[np.newaxis, :, :]  # [1, HIDDEN_DIM, seq_len]
         
         # Run decoder inference
