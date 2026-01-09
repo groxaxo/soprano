@@ -25,7 +25,9 @@ With only **80M parameters**, Soprano achieves a real‑time factor (RTF) of **~
 
 ## Installation
 
-**Requirements**: Linux or Windows, CUDA‑enabled GPU required (CPU support coming soon!).
+**Requirements**: Linux or Windows. CUDA-enabled GPU recommended for best performance.
+
+> **✨ NEW**: CPU inference is now supported! See [SOPRANO_README.md](SOPRANO_README.md) for CPU/ONNX setup instructions.
 
 ### Install with wheel
 
@@ -44,6 +46,18 @@ pip install -e .
 pip uninstall -y torch
 pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu126
 ```
+
+### Install for CPU inference (ONNX)
+
+For CPU-only deployment using ONNX Runtime:
+
+```bash
+git clone https://github.com/groxaxo/soprano.git
+cd soprano
+pip install -e ".[onnx]"
+```
+
+See [SOPRANO_README.md](SOPRANO_README.md) for complete CPU inference instructions.
 
 > **Note**: Soprano uses **LMDeploy** to accelerate inference by default. If LMDeploy cannot be installed in your environment, Soprano can fall back to the HuggingFace **transformers** backend (with slower performance). To enable this, pass `backend='transformers'` when creating the TTS model.
 
@@ -364,9 +378,9 @@ I’m a second-year undergrad who’s just started working on TTS models, so I w
 * [x] Batched inference
 * [x] Server / API inference (FastAPI with OpenAI compatibility)
 * [x] Web interface (Gradio)
+* [x] CPU support (ONNX/OpenVINO)
 * [ ] Command-line interface (CLI)
 * [ ] Additional LLM backends
-* [ ] CPU support
 * [ ] Voice cloning
 * [ ] Multilingual support
 
