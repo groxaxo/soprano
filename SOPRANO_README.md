@@ -164,10 +164,10 @@ tts = SopranoTTS(
 
 ### ONNX Runtime vs. OpenVINO
 
-- **ONNX Runtime**: Fully implemented, easy to use, good cross-platform compatibility
-- **OpenVINO**: Partially implemented (model loading only). Full inference support coming in future releases. Expected to be 1.5-3x faster than ONNX Runtime on Intel CPUs once completed.
+- **ONNX Runtime**: ✅ Fully implemented, tested, and ready for production use. Good cross-platform compatibility.
+- **OpenVINO**: ✅ Fully implemented as of the latest version. Optimized for Intel CPUs with thread configuration support. Expected to be 1.5-3x faster than ONNX Runtime on Intel CPUs.
 
-**Note**: For now, use `backend='onnx_cpu'` for actual inference. The `openvino_cpu` backend can load models but does not yet support inference operations.
+Both backends are now fully functional and support the same features through the `synthesize()` method.
 
 ### Thread Count
 
@@ -197,10 +197,9 @@ Control the quality and diversity of generated speech:
 Current limitations of CPU inference:
 
 1. **Slower than GPU**: CPU inference is typically 5-10x slower than GPU inference
-2. **No streaming support**: The CPU backend currently only supports batch inference via `synthesize()`
-3. **Model export required**: You must export models before using CPU inference
-4. **OpenVINO incomplete**: The OpenVINO backend is partially implemented (model loading only, no inference yet)
-5. **ONNX Runtime recommended**: Use `backend='onnx_cpu'` for production use
+2. **No streaming support**: The CPU backend currently only supports batch inference via `synthesize()`. Streaming (`infer_stream()`) is only available with GPU backends.
+3. **Model export required**: You must export models to ONNX format before using CPU inference
+4. **Different API**: CPU backends use `synthesize()` instead of `infer()` or `infer_batch()`
 
 ## Troubleshooting
 
@@ -236,10 +235,9 @@ pip install torch transformers huggingface_hub
 Planned enhancements for CPU inference:
 
 - [ ] Streaming support for CPU backends
-- [ ] Optimized hidden state extraction
+- [ ] Batch processing support (multiple texts in one call)
 - [ ] Quantized models for faster inference
 - [ ] Pre-exported ONNX models on HuggingFace
-- [ ] Batch processing support
 
 ## See Also
 
