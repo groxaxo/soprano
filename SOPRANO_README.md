@@ -8,17 +8,35 @@ Soprano TTS can be run on CPU without CUDA by exporting the models to ONNX forma
 
 ## Installation
 
-Install Soprano with ONNX support:
+Install Soprano with ONNX support (CPU inference):
 
 ```bash
+pip install soprano-tts[onnx]
+```
+
+Or from source:
+
+```bash
+git clone https://github.com/groxaxo/soprano.git
+cd soprano
 pip install -e ".[onnx]"
 ```
 
-For OpenVINO support (optional, for optimized CPU inference):
+For OpenVINO support (optional, optimized for Intel CPUs):
 
 ```bash
-pip install openvino
+pip install soprano-tts[openvino]
 ```
+
+Or from source:
+
+```bash
+git clone https://github.com/groxaxo/soprano.git
+cd soprano
+pip install -e ".[openvino]"
+```
+
+> **Note**: CPU-only installation with `[onnx]` or `[openvino]` does NOT install PyTorch or CUDA dependencies, making it much lighter and faster to install.
 
 ## Exporting Models to ONNX
 
