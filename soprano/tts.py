@@ -117,9 +117,7 @@ class SopranoTTS:
             core = Core()
             
             # Configure CPU inference settings
-            config = {
-                properties.inference_num_threads(): num_threads
-            }
+            config = {properties.inference_num_threads(): num_threads}
             
             # Load and compile models with configuration
             self.lm_model = core.read_model(lm_path)
@@ -475,7 +473,7 @@ class SopranoTTS:
                 "Failed to extract any hidden states from the language model. "
                 "This likely means the LM model was not exported correctly. "
                 "Please ensure you used soprano/export/lm_step_export.py to export the model, "
-                "which wraps the base model to output both logits and hidden states as the second output."
+                "which wraps the base model to output both logits and hidden states as the second output tensor."
             )
     
     def _decode_audio(self, hidden_states):
@@ -491,10 +489,8 @@ class SopranoTTS:
                 f"Expected hidden dimension {HIDDEN_DIM}, got {hidden_states.shape[1]}"
             )
         
-        # Prepare input for decoder: [batch=1, channels=HIDDEN_DIM, seq_len]
-        # Input is validated to be [seq_len, hidden_dim], transpose to [hidden_dim, seq_len]
-        # and add batch dimension
-        hidden_states = hidden_states.T[np.newaxis, :, :]  # [1, HIDDEN_DIM, seq_len]
+        # Transpose and add batch dimension: [seq_len, hidden_dim] -> [1, hidden_dim, seq_len]
+        hidden_states = hidden_states.T[np.newaxis, :, :]
         
         # Run decoder inference
         if self.backend == 'onnx_cpu':
