@@ -106,20 +106,27 @@ class SopranoTTS:
         elif backend == 'openvino_cpu':
             try:
                 from openvino.runtime import Core
+                from openvino.runtime import properties
             except ImportError:
                 raise ImportError(
                     "openvino is required for OpenVINO backend. "
                     "Install with: pip install openvino"
                 )
             
+            # Initialize OpenVINO core with CPU configuration
             core = Core()
+            
+            # Configure CPU inference settings
+            config = {properties.inference_num_threads(): num_threads}
+            
+            # Load and compile models with configuration
             self.lm_model = core.read_model(lm_path)
-            self.lm_compiled = core.compile_model(self.lm_model, "CPU")
+            self.lm_compiled = core.compile_model(self.lm_model, "CPU", config)
             
             self.decoder_model = core.read_model(decoder_path)
-            self.decoder_compiled = core.compile_model(self.decoder_model, "CPU")
+            self.decoder_compiled = core.compile_model(self.decoder_model, "CPU", config)
             
-            print(f"✓ Loaded OpenVINO models on CPU")
+            print(f"✓ Loaded OpenVINO models on CPU with {num_threads} threads")
         
         # Load tokenizer for CPU backends
         from transformers import AutoTokenizer
@@ -178,8 +185,11 @@ class SopranoTTS:
             repetition_penalty=1.2):
         if self.use_cpu_backend:
             raise NotImplementedError(
-                "infer() is not available with ONNX/OpenVINO backends. "
-                "Use synthesize() instead."
+                "The infer() method is not available with ONNX/OpenVINO backends. "
+                "Please use the synthesize() method instead. Example:\n"
+                "  result = tts.synthesize(text='Your text here')\n"
+                "  audio = result['audio']\n"
+                "  sample_rate = result['sample_rate']"
             )
         
         results = self.infer_batch([text],
@@ -199,8 +209,11 @@ class SopranoTTS:
             repetition_penalty=1.2):
         if self.use_cpu_backend:
             raise NotImplementedError(
-                "infer_batch() is not available with ONNX/OpenVINO backends. "
-                "Use synthesize() instead."
+                "The infer_batch() method is not available with ONNX/OpenVINO backends. "
+                "Please use the synthesize() method for each text individually. Example:\n"
+                "  for text in texts:\n"
+                "      result = tts.synthesize(text=text)\n"
+                "      # process result['audio'] and result['sample_rate']"
             )
         
         sentence_data = self._preprocess_text(texts)
@@ -256,7 +269,9 @@ class SopranoTTS:
             repetition_penalty=1.2):
         if self.use_cpu_backend:
             raise NotImplementedError(
-                "infer_stream() is not available with ONNX/OpenVINO backends."
+                "The infer_stream() method is not available with ONNX/OpenVINO backends. "
+                "Streaming inference is only supported with GPU backends (lmdeploy, transformers). "
+                "For CPU inference, use the synthesize() method instead."
             )
         
         start_time = time.time()
@@ -431,10 +446,20 @@ class SopranoTTS:
                 # Second output contains hidden states from the last layer
                 # Shape: [batch, seq_len, hidden_dim]
                 token_hidden = outputs[1][0, -1, :]
-                if token_hidden.shape[0] == HIDDEN_DIM:  # Verify expected hidden dim
-                    hidden_states_list.append(token_hidden)
-                else:
-                    print(f"Warning: Unexpected hidden state dimension {token_hidden.shape[0]}, expected {HIDDEN_DIM}")
+                # Validate hidden dimension
+                if token_hidden.shape[0] != HIDDEN_DIM:
+                    raise RuntimeError(
+                        f"Unexpected hidden state dimension {token_hidden.shape[0]}, expected {HIDDEN_DIM}. "
+                        "Please verify the LM model was exported correctly with soprano/export/lm_step_export.py"
+                    )
+                hidden_states_list.append(token_hidden)
+            else:
+                # If model doesn't output hidden states, we cannot proceed
+                raise RuntimeError(
+                    "LM model does not output hidden states. "
+                    "Please re-export the model using soprano/export/lm_step_export.py "
+                    "which wraps the model to output both logits and hidden states."
+                )
             
             # Update sequences for next iteration
             input_ids = np.concatenate([input_ids, [[next_token]]], axis=1)
@@ -443,19 +468,29 @@ class SopranoTTS:
         if hidden_states_list:
             return np.stack(hidden_states_list)
         else:
-            # If no hidden states were extracted, raise an error instead of silently failing
+            # If no hidden states were extracted, this is a critical error
             raise RuntimeError(
-                "Failed to extract hidden states from the language model. "
-                "This likely means the LM export script needs to be updated to properly "
-                "export hidden states. Please ensure lm_step_export.py is configured to "
-                "output the last hidden layer states as the second output."
+                "Failed to extract any hidden states from the language model. "
+                "This likely means the LM model was not exported correctly. "
+                "Please ensure you used soprano/export/lm_step_export.py to export the model, "
+                "which wraps the base model to output both logits and hidden states as the second output tensor."
             )
     
     def _decode_audio(self, hidden_states):
         """Decode hidden states to audio waveform."""
-        # Prepare input for decoder: [batch=1, channels=HIDDEN_DIM, seq_len]
-        if len(hidden_states.shape) == 2:
-            hidden_states = hidden_states.T[np.newaxis, :, :]  # [1, HIDDEN_DIM, seq_len]
+        # Validate input shape
+        if len(hidden_states.shape) != 2:
+            raise ValueError(
+                f"Expected hidden_states to be 2D [seq_len, hidden_dim], got shape {hidden_states.shape}"
+            )
+        
+        if hidden_states.shape[1] != HIDDEN_DIM:
+            raise ValueError(
+                f"Expected hidden dimension {HIDDEN_DIM}, got {hidden_states.shape[1]}"
+            )
+        
+        # Transpose and add batch dimension: [seq_len, hidden_dim] -> [1, hidden_dim, seq_len]
+        hidden_states = hidden_states.T[np.newaxis, :, :]
         
         # Run decoder inference
         if self.backend == 'onnx_cpu':
