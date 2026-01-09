@@ -9,7 +9,6 @@ from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
 from contextlib import asynccontextmanager
-import torch
 import io
 from scipy.io import wavfile
 from soprano import SopranoTTS

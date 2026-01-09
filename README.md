@@ -29,27 +29,29 @@ With only **80M parameters**, Soprano achieves a real‑time factor (RTF) of **~
 
 > **✨ NEW**: CPU inference is now supported! See [SOPRANO_README.md](SOPRANO_README.md) for CPU/ONNX setup instructions.
 
-### Install with wheel
+### GPU Installation (Recommended for best performance)
+
+Install with wheel:
 
 ```bash
-pip install soprano-tts
+pip install soprano-tts[gpu]
 pip uninstall -y torch
 pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu126
 ```
 
-### Install from source
+Or install from source:
 
 ```bash
 git clone https://github.com/groxaxo/soprano.git
 cd soprano
-pip install -e .
+pip install -e ".[gpu]"
 pip uninstall -y torch
 pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu126
 ```
 
-### Install for CPU inference (ONNX)
+### CPU-Only Installation (No CUDA required)
 
-For CPU-only deployment using ONNX Runtime:
+For CPU-only deployment using ONNX Runtime (minimal dependencies):
 
 ```bash
 git clone https://github.com/groxaxo/soprano.git
@@ -57,9 +59,34 @@ cd soprano
 pip install -e ".[onnx]"
 ```
 
+For CPU inference with OpenVINO (optimized for Intel CPUs):
+
+```bash
+git clone https://github.com/groxaxo/soprano.git
+cd soprano
+pip install -e ".[openvino]"
+```
+
 See [SOPRANO_README.md](SOPRANO_README.md) for complete CPU inference instructions.
 
-> **Note**: Soprano uses **LMDeploy** to accelerate inference by default. If LMDeploy cannot be installed in your environment, Soprano can fall back to the HuggingFace **transformers** backend (with slower performance). To enable this, pass `backend='transformers'` when creating the TTS model.
+### Optional Features
+
+Install web UI (Gradio):
+```bash
+pip install soprano-tts[webui]
+```
+
+Install API server (FastAPI):
+```bash
+pip install soprano-tts[server]
+```
+
+Install all features:
+```bash
+pip install soprano-tts[all]
+```
+
+> **Note**: GPU installation uses **LMDeploy** to accelerate inference by default. If LMDeploy cannot be installed in your environment, Soprano can fall back to the HuggingFace **transformers** backend (with slower performance). To enable this, pass `backend='transformers'` when creating the TTS model.
 
 ---
 

@@ -4,7 +4,6 @@ Gradio Web Interface for Soprano TTS
 A modern, user-friendly interface for text-to-speech synthesis
 """
 import gradio as gr
-import torch
 from soprano import SopranoTTS
 
 # Initialize the TTS model
