@@ -1,5 +1,3 @@
-from .vocos.decoder import SopranoDecoder
-import torch
 import numpy as np
 import re
 from unidecode import unidecode
@@ -50,7 +48,16 @@ class SopranoTTS:
             self.backend = backend
             return
         
-        # Legacy PyTorch backends
+        # Legacy PyTorch backends - import torch and decoder only when needed
+        try:
+            import torch
+            from .vocos.decoder import SopranoDecoder
+        except ImportError as e:
+            raise ImportError(
+                f"PyTorch is required for GPU backends. Install with: pip install soprano-tts[gpu]\n"
+                f"Original error: {e}"
+            )
+        
         RECOGNIZED_DEVICES = ['cuda']
         RECOGNIZED_BACKENDS = ['auto', 'lmdeploy', 'transformers']
         assert device in RECOGNIZED_DEVICES, f"unrecognized device {device}, device must be in {RECOGNIZED_DEVICES}"

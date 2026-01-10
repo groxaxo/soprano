@@ -16,21 +16,52 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-  "lmdeploy",
-  "torch",
   "unidecode",
   "scipy",
-  "gradio>=4.0.0,<5.0.0",
-  "fastapi>=0.100.0,<1.0.0",
-  "uvicorn[standard]>=0.23.0,<1.0.0",
-  "pydantic>=2.0.0,<3.0.0"
+  "numpy",
+  "huggingface-hub>=0.20.0"
 ]
 license = {file = "LICENSE"}
 
 [project.optional-dependencies]
+# GPU inference with CUDA (default for GPU users)
+gpu = [
+  "lmdeploy",
+  "torch",
+]
+
+# CPU inference with ONNX Runtime
 onnx = [
   "onnxruntime>=1.16.0",
   "transformers>=4.30.0"
+]
+
+# CPU inference with OpenVINO (optimized for Intel CPUs)
+openvino = [
+  "openvino>=2023.0.0",
+  "transformers>=4.30.0"
+]
+
+# Web UI using Gradio
+webui = [
+  "gradio>=4.0.0,<5.0.0"
+]
+
+# API server using FastAPI
+server = [
+  "fastapi>=0.100.0,<1.0.0",
+  "uvicorn[standard]>=0.23.0,<1.0.0",
+  "pydantic>=2.0.0,<3.0.0"
+]
+
+# All features (GPU + Web UI + API server)
+all = [
+  "lmdeploy",
+  "torch",
+  "gradio>=4.0.0,<5.0.0",
+  "fastapi>=0.100.0,<1.0.0",
+  "uvicorn[standard]>=0.23.0,<1.0.0",
+  "pydantic>=2.0.0,<3.0.0"
 ]
 
 [project.urls]

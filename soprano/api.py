@@ -7,7 +7,13 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-import torch
+
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
@@ -102,7 +108,7 @@ async def openai_speech(request: OpenAISpeechRequest):
         audio = tts_service.infer(normalized_text)
         
         # Convert torch tensor to numpy
-        if torch.is_tensor(audio):
+        if TORCH_AVAILABLE and torch.is_tensor(audio):
             audio = audio.cpu().numpy()
         
         # Apply FlashSR upsampling if enabled

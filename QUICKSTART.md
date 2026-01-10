@@ -19,11 +19,21 @@ cd soprano
 
 2. **Install dependencies:**
 
+For GPU inference (recommended):
+
 ```bash
-pip install -e .
+pip install -e ".[gpu]"
 pip uninstall -y torch
 pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu126
 ```
+
+For CPU-only inference (no CUDA required):
+
+```bash
+pip install -e ".[onnx]"
+```
+
+> **Note**: For the web interface and API server, you'll also need to install the optional dependencies. See "Optional Features" below.
 
 ## Using the Web Interface (Gradio)
 
@@ -230,13 +240,25 @@ model = SopranoTTS(
 **Issue**: Missing dependencies
 
 **Solution**:
+
+For GPU installation:
 ```bash
-pip install -e .
+pip install -e ".[gpu]"
 ```
 
-Or install specific packages:
+For web UI:
 ```bash
-pip install gradio fastapi uvicorn pydantic
+pip install -e ".[webui]"
+```
+
+For API server:
+```bash
+pip install -e ".[server]"
+```
+
+For all features:
+```bash
+pip install -e ".[all]"
 ```
 
 ## Next Steps
